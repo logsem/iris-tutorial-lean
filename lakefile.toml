@@ -1,5 +1,9 @@
 name = "textbook"
-defaultTargets = ["BookGen", "IrisTutorialBook", "IrisTutorial", "textbook"]
+# Build the `textbook` executable by default; it transitively pulls in the
+# book root (`IrisTutorialBook`), every chapter (`IrisTutorial.*`), and the
+# generation machinery (`BookGen.*`). Listing the libs by name here does not
+# work because `BookGen` has no root `BookGen.lean` module.
+defaultTargets = ["textbook"]
 
 [[require]]
 name = "verso"
