@@ -1,0 +1,71 @@
+name: Build and Deploy Book
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Allow the deploy job to publish to GitHub Pages.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Allow only one concurrent deployment; let in-progress runs finish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build book
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # Installs the toolchain pinned in `lean-toolchain`, runs `lake build`
+      # (elaborating every chapter / type-checking all proofs), and caches
+      # `.lake` so the verso and iris-lean dependency builds are reused.
+      - name: Build and check proofs
+        uses: leanprover/lean-action@v1
+        with:
+          build: true
+
+      # `lake build` above already compiled everything; this runs the
+      # `textbook` executable to render the HTML book and extract the
+      # example code into `_out/`.
+      - name: Render book and extract example code
+        run: lake exe textbook
+
+      - name: Assemble site (html + code.zip)
+        run: |
+          rm -rf _site
+          mkdir -p _site
+          cp -r _out/html-multi/. _site/
+          (cd _out && zip -r "$GITHUB_WORKSPACE/_site/code.zip" example-code)
+
+      # On PRs the full build above already runs, catching breakage early.
+      # Only upload the Pages artifact for push/manual runs that will deploy
+      # (this also avoids restricted-permission warnings on PRs from forks).
+      - name: Upload Pages artifact
+        if: github.event_name != 'pull_request'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build
+    runs-on: ubuntu-latest
+    # Publish only for pushes to main and manual runs — never for PRs.
+    if: github.event_name != 'pull_request'
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@v4

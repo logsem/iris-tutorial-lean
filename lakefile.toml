@@ -1,14 +1,33 @@
 name = "textbook"
-defaultTargets = ["TextbookTemplate", "textbook"]
+defaultTargets = ["BookGen", "IrisTutorialBook", "IrisTutorial", "textbook"]
 
 [[require]]
 name = "verso"
 git = "https://github.com/leanprover/verso"
 rev = "v4.30.0"
 
+# iris-lean has no v4.30.0 release tag, so we pin to an exact commit that
+# is compatible with the Lean toolchain in `lean-toolchain` (leanprover/lean4:4.30.0).
+[[require]]
+name = "iris"
+git = "https://github.com/leanprover-community/iris-lean.git"
+subDir = "Iris"
+rev = "b7161660991216899f212eb33a9da47418655404"
+
+# Book generation machinery inherited from the Verso textbook template
+# (savedLean/savedImport elaborators, bibliography helpers). No root module
+# file of its own, so glob its submodules explicitly.
 [[lean_lib]]
-name = "TextbookTemplate"
+name = "BookGen"
+globs = ["BookGen.*"]
+
+# The book root: the `#doc` document with front matter and chapter includes.
+[[lean_lib]]
+name = "IrisTutorialBook"
+
+[[lean_lib]]
+name = "IrisTutorial"
 
 [[lean_exe]]
 name = "textbook"
-root = "TextbookTemplateMain"
+root = "BookGenMain"
