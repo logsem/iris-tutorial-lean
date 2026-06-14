@@ -63,9 +63,8 @@ The type of propositions in Iris is `IProp GF`. All proofs in Iris
 are performed in a context with a `GF : BundledGFunctors`, used to
 specify available resources. The details of `GF` will come later when
 we introduce resource algebras. For now, just remember to work inside
-a `variable {GF}` block. This corresponds directly to the Rocq
-tutorial's `Section proofs.  Context {Σ : gFunctors}.` — Lean's
-`BundledGFunctors` plays the role of Rocq's `gFunctors`.
+a `variable {GF}` block, which makes a fixed but arbitrary collection
+of resources available throughout the section.
 
 ```savedImport
 import Iris.BI
@@ -97,8 +96,7 @@ non-spatial context, but, in general, we shall use new tactics that
 work natively with the spatial context. These new tactics start with
 the letter `i`: instead of `intro H` we use `iintro H`, and instead of
 `apply H` we use `iapply H`. Note that identifiers for hypotheses in
-the spatial context are ordinary Lean identifiers — unlike the Rocq
-version of Iris, the Lean port uses identifiers rather than strings.
+the spatial context are ordinary Lean identifiers.
 
 To see this in action we will prove the statement `P ⊢ P`, for all
 `P`.
@@ -141,9 +139,9 @@ reason why the regular Lean tactics no longer suffice. The new tactics
 work with both the non-spatial and the spatial contexts.
 
 Iris propositions include many of the usual logical connectives such
-as conjunction `P ∧ Q`. The Lean port overloads these notations
-directly on the `IProp GF` type, so — unlike the Rocq version — no
-`%I` scope annotation is needed.
+as conjunction `P ∧ Q`. These notations are overloaded directly on the
+`IProp GF` type, so they can be used without any extra scope
+annotation.
 
 # Basic Separation Logic
 

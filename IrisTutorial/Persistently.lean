@@ -79,8 +79,8 @@ namespace Persistently
 variable {hlc} {GF : BundledGFunctors} [HeapLangGS hlc GF]
 ```
 
-The cases pattern `#H` (matching Rocq's `"#H"` intro pattern) moves
-a persistent hypothesis into the intuitionistic context.
+The cases pattern `#H` moves a persistent hypothesis into the
+intuitionistic context.
 
 ```savedLean
 theorem pers_context (P Q : IProp GF) [Persistent P] :
@@ -252,10 +252,10 @@ theorem first_is_5 (x : Val) (xs : List Val) :
 # Examples of Persistent Propositions
 
 Thus far, the only basic persistent propositions we have seen are
-pure propositions, such as equalities. The Rocq tutorial showcases
-two additional examples: Hoare triples and persistent points-to
-predicates. The points-to part we can port; the Hoare-triples part
-depends on an upstream gap.
+pure propositions, such as equalities. Two further examples are
+Hoare triples and persistent points-to predicates. The points-to
+part we can cover here; the Hoare-triples part depends on an
+upstream gap.
 
 ## Hoare Triples
 
@@ -279,7 +279,7 @@ able to run `e` multiple times.
 -- Hoare-triple notation `{{{ P }}} e {{{ ... }}}` (missing) and
 -- on a `wp_apply` convenience tactic (also missing).
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisites land):
 --   Example counter (inc : val) : expr :=
 --     let: "c" := ref #0 in
 --     inc "c" ;; inc "c" ;; !"c".
@@ -314,16 +314,14 @@ typeclasses.
 
 ```
 -- TODO (upstream — iris-lean): the proof below uses `pt_split`
--- with the fractional notation `l ↦{# 1/2} v` (Rocq syntax). In
--- iris-lean the spelling is `l ↦{.own (1/2)} v` and the
--- `iCombine`/`iDestruct` automation for fractional splits is
--- still maturing. The point is that
+-- with a fractional points-to. In iris-lean the spelling is
+-- `l ↦{.own (1/2)} v` and the `iCombine`/`iDestruct` automation
+-- for fractional splits is still maturing. The point is that
 -- `pointsto_fractional` / `pointsto_combine` already exist as
--- lemmas (see `Iris.BI.Lib.GenHeap`); a Rocq-style ergonomic
--- port awaits the iris-lean `iCombine` and fractional-pattern
--- tactics.
+-- lemmas (see `Iris.BI.Lib.GenHeap`); an ergonomic version awaits
+-- the iris-lean `iCombine` and fractional-pattern tactics.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisites land):
 --   Lemma pt_split l v : l ↦ v ⊣⊢ (l ↦{# 1/2 } v) ∗ (l ↦{# 1/2 } v).
 --   Proof.
 --     iSplit.
@@ -353,7 +351,7 @@ thread.
 -- yet there. `wp_par` itself works fine (see Specifications
 -- chapter); the missing piece is the fractional bookkeeping.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisites land):
 --   Example par_read_write (l : loc) : expr :=
 --     let: "r" := (!#l ||| !#l) in
 --     #l <- #5.
@@ -368,12 +366,11 @@ If one owns a fraction of a points-to predicate, one can decide to
 *discard* the fraction. This means that it is no longer possible
 to recombine points-to predicates to get the full fraction. As
 such, the value in the points-to predicate can never be changed
-again — the location has become read-only. iris-lean writes the
-persistent points-to as `l ↦{.discard} v` (the Rocq tutorial writes
-`l ↦□ v`). It is persistent.
+again — the location has become read-only. The persistent
+points-to is written `l ↦{.discard} v`. It is persistent.
 
 The lemma that makes a points-to persistent is
-`Iris.pointsTo_persist` (Rocq alias `pointsto_persist`):
+`Iris.pointsTo_persist`:
 
 ```
 ⊢@{IProp GF} l ↦{dq} v ==∗ l ↦{.discard} v
@@ -407,9 +404,9 @@ the cleaner `imod ... with #Hl'` pattern.
 As a more elaborate example, here is a parallel program where two
 threads both read from the *same* location. The key idea is that
 once the points-to is made *persistent* (`↦{.discard}`), it can be
-shared across both threads. (The Rocq tutorial additionally wraps
-the result in arithmetic computing `21 * 2 = 42`; we drop that
-because iris-lean still lacks `PureExec` for `+` / `*`.)
+shared across both threads. (We keep the example to a plain read;
+wrapping the result in arithmetic is not possible here because
+iris-lean still lacks `PureExec` for `+` / `*`.)
 
 ```savedLean
 section ParRead
@@ -451,7 +448,8 @@ threads automatically. That requires registering a
 -- proof above can be tightened so the caller passes a single
 -- discarded points-to and iris-lean splits it automatically.
 
--- Rocq tutorial reference (full version with arithmetic):
+-- Reference implementation, full version with arithmetic
+-- (to port once the prerequisites land):
 --   Example par_read : expr :=
 --     let: "l" := ref #7 in
 --     let: "r" := ( (!"l" + #14) ||| (!"l" * #3) ) in
@@ -462,10 +460,10 @@ threads automatically. That requires registering a
 
 ```
 -- TODO (upstream — iris-lean): once `PureExec` for arithmetic
--- lands, restore the Rocq tutorial's full `par_read` example with
--- its `21 * 2 = 42` postcondition.
+-- lands, restore the full `par_read` example with its
+-- `21 * 2 = 42` postcondition.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisites land):
 --   Example par_read : expr :=
 --     let: "l" := ref #7 in
 --     let: "r" := ( (!"l" + #14) ||| (!"l" * #3) ) in

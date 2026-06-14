@@ -25,8 +25,7 @@ as we are working inside Lean. As the features of HeapLang are fairly
 standard, the focus in this chapter is mainly on showcasing the
 syntax of the language through simple examples.
 
-The Lean port of HeapLang in iris-lean differs from the Rocq version
-in two notable ways:
+HeapLang in iris-lean has two notable characteristics:
 
 1. Expressions live in the type `Iris.HeapLang.Exp`, and are written
    inside an embedded DSL `hl( ... )` rather than via top-level
@@ -36,16 +35,15 @@ in two notable ways:
 
 # The HeapLang Interpreter (Optional)
 
-The Rocq port of Iris ships a rudimentary HeapLang interpreter in
-`iris.unstable.heap_lang`. At the time of this writing, iris-lean
-does **not** include an interpreter, so the `Compute (exec ...)`
-incantations that appear in the Rocq tutorial cannot be run directly
-in Lean. We still see, however, that HeapLang expressions are pieces
-of syntax we can inspect with `#check`.
+At the time of this writing, iris-lean does *not* include a
+HeapLang interpreter, so we cannot evaluate expressions to their
+runtime values directly in Lean. We still see, however, that
+HeapLang expressions are pieces of syntax we can inspect with
+`#check`.
 
-TODO (upstream — iris-lean): once an `exec` evaluator lands, restore
-the `#eval exec 10 ...` lines that the Rocq tutorial uses to display
-runtime values for each example below.
+TODO (upstream — iris-lean): once an `exec` evaluator lands, add
+`#eval exec 10 ...` lines to display the runtime value for each
+example below.
 
 # Pure Constructs
 
@@ -79,13 +77,12 @@ The expected result is `#true`.
 
 ```savedLean
 -- TODO (upstream — iris-lean): use the unit literal here once the
--- `hl` DSL gains a sugared form for `Val.lit BaseLit.unit` (Rocq: `#()`).
+-- `hl` DSL gains a sugared form for `Val.lit BaseLit.unit`.
 def if_then_else : Exp := hl(if #true then #1 else #0)
 ```
 
-In the Rocq version of this example, the consequent is the unit
-value `#()`; iris-lean does not yet have a sugared spelling for the
-unit literal, so we use an integer here instead.
+iris-lean does not yet have a sugared spelling for the unit literal,
+so we use an integer in the consequent here instead.
 
 HeapLang supports let expressions. Technically, let expressions are
 not native to HeapLang — they are sugar for application of a lambda
@@ -171,8 +168,8 @@ def alloc : Exp := hl(
 ```
 
 After allocation, we can read and update the value at the returned
-location `l` with `!l` and `l ← v`, respectively. (The Rocq port
-spells the store as `l <- v`; iris-lean uses the left-arrow `←`.)
+location `l` with `!l` and `l ← v`, respectively. The store uses
+the left-arrow `←`.
 
 ```savedLean
 def load : Exp := hl(
@@ -213,7 +210,7 @@ that `cas` only returns the boolean.
 
 ```savedLean
 -- TODO (upstream — iris-lean): use the unit literal in the success
--- branches once the `hl` DSL gains a `#()` form (Rocq tutorial uses it).
+-- branches once the `hl` DSL gains a `#()` form.
 def cas_example : Exp := hl(
   let l := ref(#5);
   if cas(l, #6, #7) then #0 else
@@ -225,9 +222,9 @@ def cas_example : Exp := hl(
       #0)
 ```
 
-The Rocq tutorial returns the unit value `#()` from the success
-branches; we substitute `#0` here for the same reason as in the
-`if_then_else` example above.
+We substitute `#0` in the success branches here for the same reason
+as in the `if_then_else` example above: there is not yet a sugared
+spelling for the unit literal.
 
 # Concurrency
 
@@ -245,19 +242,18 @@ def forkEx : Exp := hl(
 ```
 
 From the `fork` primitive, we can implement several other
-constructions for concurrency. The Rocq version of HeapLang ships
-with two such constructions, `spawn` and `par`, which are derived
-from `fork`. At the time of writing, iris-lean has not yet ported
-these libraries; the equivalent examples in the Rocq tutorial
-(`Example spawn` and `Example par`) therefore have no direct Lean
-counterpart in this chapter.
+constructions for concurrency, such as `spawn` and `par`, which are
+derived from `fork`. At the time of writing, iris-lean has not yet
+ported these libraries, so this chapter does not include examples
+that use them.
 
 TODO (upstream — iris-lean): once the `spawn` / `par` libraries are
-ported, add the two corresponding examples here. The Rocq versions
-are reproduced below as reference for the port.
+ported, add the two corresponding examples here. A reference
+implementation (to port once the prerequisite lands) is reproduced
+below.
 
 ```
-(* Rocq tutorial — to be ported once iris-lean has spawn/par *)
+(* Reference implementation — to port once iris-lean has spawn/par *)
 Example spawn_ex : expr :=
   let: "l" := ref #5 in
   let: "handle" := spawn (λ: "_", "l" <- #6;; #2) in

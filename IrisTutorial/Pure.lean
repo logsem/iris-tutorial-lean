@@ -45,9 +45,9 @@ theorem asm_pure (φ : Prop) : ⌜φ⌝ ⊢@{IProp GF} ⌜φ⌝ := by
 ```
 
 When stating lemmas that do not depend on generic Iris propositions
-mentioning `GF`, we have to specify the carrier type. The Lean
-ascription syntax `⊢@{IProp GF} P` plays the same role as the Rocq
-local notation `⊢@{iPropI Σ} P` used in the original tutorial.
+mentioning `GF`, we have to specify the carrier type. The ascription
+syntax `⊢@{IProp GF} P` records that the entailment lives in the
+proposition type `IProp GF`.
 
 A pure proposition is then any Iris proposition `P` for which there
 exists a Lean proposition `φ`, such that `P ⊣⊢ ⌜φ⌝`.
@@ -62,9 +62,9 @@ theorem eq_5_5 : ⊢@{IProp GF} ⌜5 = 5⌝ := by
   rfl
 ```
 
-To eliminate a pure proposition, we can use the cases pattern `%name`
-(matching Rocq's `"%name"`). This moves the proposition into the
-non-spatial Lean context as a Lean proposition.
+To eliminate a pure proposition, we can use the cases pattern `%name`.
+This moves the proposition into the non-spatial Lean context as a Lean
+proposition.
 
 ```savedLean
 theorem eq_elm {α : Type} (P : α → IProp GF) (x y : α) :
@@ -77,9 +77,9 @@ theorem eq_elm {α : Type} (P : α → IProp GF) (x y : α) :
 It is quite easy to show that the propositions `⌜5 = 5⌝` and
 `⌜x = y⌝` from above are pure. However, it can become quite
 burdensome for more complicated Iris propositions. Fortunately, Iris
-has machinery (the `IntoPure` / `FromPure` classes in the Rocq
-version, and the corresponding instances in iris-lean) that identifies
-pure propositions automatically — `ipureintro` makes use of them.
+has machinery (the `IntoPure` / `FromPure` type classes and their
+instances) that identifies pure propositions automatically —
+`ipureintro` makes use of them.
 
 `True` is pure.
 

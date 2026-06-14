@@ -23,6 +23,7 @@ type-checked:
 - **Lang**
 - **Specifications**
 - **Persistently**
+- **Linked Lists**
 
 The remaining chapters are stubs ("This chapter has not yet been ported")
 pending translation from their Rocq sources.

@@ -40,10 +40,12 @@ authors := ["Lars Birkedal", "Simon Gregersen", "Mathias Adam Møller",
 %%%
 
 {index}[Iris]
-This is a Lean port of the
-[Iris tutorial](https://github.com/logsem/iris-tutorial)
-originally developed at Aarhus University as a Rocq tutorial for
-the [Iris separation logic framework](https://iris-project.org/).
+This tutorial introduces the
+[Iris separation logic framework](https://iris-project.org/) in Lean,
+using the [iris-lean](https://github.com/leanprover-community/iris-lean)
+development. It is adapted from the
+[Iris tutorial](https://github.com/logsem/iris-tutorial) originally
+developed at Aarhus University.
 
 The exposition is intended for a broad range of readers from advanced
 undergraduates to PhD students and researchers. We assume that readers
@@ -53,10 +55,7 @@ examples. The tutorial material is intended to be self-contained. No
 specific background in logic or programming languages is assumed but
 some familiarity with basic programming language theory and discrete
 mathematics will be beneficial. Additionally, basic knowledge of the
-Lean prover is assumed; this port replaces the Rocq proofs of the
-original with Lean 4 proofs against the
-[iris-lean](https://github.com/leanprover-community/iris-lean) port of
-Iris.
+Lean prover is assumed.
 
 # Recommended Learning Path
 

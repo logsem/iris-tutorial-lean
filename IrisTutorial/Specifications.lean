@@ -31,8 +31,8 @@ The program logic for HeapLang relies on a basic notion of a
 resource: the resource of heaps. Recall that `GF` specifies the
 available resources. To make the resource of heaps available, we
 require an instance of `HeapLangGS hlc GF` throughout this section.
-This corresponds directly to the Rocq tutorial's
-`Context {!heapGS Σ}` (with a backtick before the brace).
+We declare it as a `variable` so that every definition and theorem
+below has the resource of heaps available.
 
 ```savedImport
 import Iris.BI
@@ -61,10 +61,9 @@ form `WP e {{ v, Φ v }}`. This asserts that if the HeapLang program
 `e` terminates at some value `v`, then `v` satisfies the predicate
 `Φ`. The double curly brackets are the *postcondition*.
 
-The Rocq tutorial begins with a pure arithmetic example
-`#1 + #2 * #3 + #4 + #5` and uses the `wp_op`/`wp_pure`/`wp_pures`
-tactics to symbolically execute it. The Lean version of these
-tactics is `wp_pure`/`wp_pures`, which iterate the
+A natural first example is a pure arithmetic expression such as
+`#1 + #2 * #3 + #4 + #5`, symbolically executed with the
+`wp_pure`/`wp_pures` tactics, which iterate the
 `wp_pure_step_fupd` rule. However, iris-lean's HeapLang only
 provides `PureExec` instances for β-reduction, `if`/`case`/`inj`,
 pair projections, and `≤` on integers. The arithmetic operators
@@ -77,7 +76,7 @@ or any of the additions.
 -- bit-wise / shift operators). Until then `arith_spec` cannot be
 -- proved in the natural way.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisite lands):
 --   Example arith : expr := #1 + #2 * #3 + #4 + #5.
 --   Lemma arith_spec : ⊢ WP arith {{ v, ⌜v = #16⌝ }}.
 --   Proof. rewrite /arith. wp_op. wp_pure. wp_pures.
@@ -131,7 +130,7 @@ def lambda : Exp :=
 -- `+` and `*`. The lambda β-reductions all work via
 -- `wp_pure`/`wp_pures`, but the arithmetic reductions do not.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisite lands):
 --   Lemma lambda_spec : ⊢ WP lambda {{ v, ⌜v = #20⌝ }}.
 --   Proof. rewrite /lambda. wp_pures. done. Qed.
 ```
@@ -158,16 +157,17 @@ In this section, we introduce our first notion of a resource: the
 resource of heaps. As mentioned in the basics chapter, propositions
 in Iris describe / assert ownership of resources. To describe
 resources in the resource of heaps, we use the *points-to*
-predicate, written `l ↦ some v`. (The Rocq tutorial writes `l ↦ v`;
-the Lean port carries an `Option` because the model also tracks
-deallocated locations.) Intuitively, `l ↦ some v` describes all
+predicate, written `l ↦ some v`. The value carries an `Option`
+because the heap model also tracks deallocated locations: `some v`
+means the location currently holds `v`. Intuitively, `l ↦ some v`
+describes all
 heap fragments that have value `v` stored at location `l`. The
 proposition
 `l1 ↦ some hl_val(#1) ∗ l2 ↦ some hl_val(#2)`
 then describes all heap fragments that map `l1` to `1` and `l2` to
 `2`.
 
-The Rocq tutorial's running example for this section is
+A running example for this section is
 
 ```
 let: "x" := ref #1 in
@@ -176,7 +176,7 @@ let: "x" := ref #1 in
 ```
 
 which both touches the heap *and* performs an addition. We can
-state and partly proved it in iris-lean, but the addition step is
+state and partly prove it in iris-lean, but the addition step is
 blocked by the same `PureExec` gap as above; see the per-step
 breakdown below.
 
@@ -194,7 +194,7 @@ def prog : Exp := hl(
 -- `wp_pure`. Until `PureExec` for `+` lands, `prog_spec` cannot be
 -- proved cleanly.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisite lands):
 --   Lemma prog_spec : ⊢ WP prog {{ v, ⌜v = #3⌝ }}.
 --   Proof.
 --     rewrite /prog.
@@ -237,12 +237,11 @@ conditions on whether the stored value equals the test value.
 
 ```
 -- TODO (upstream — iris-lean): port a `wp_cmpxchg` lemma (and a
--- matching tactic) that branches on the equality decision —
--- equivalent to the Rocq tutorial's `wp_cmpxchg as H1 | H2`. The
--- current iris-lean only ships the two outcome-specific lemmas
--- `wp_cmpXchg_fail` and `wp_cmpXchg_true`.
+-- matching tactic) that branches on the equality decision in a
+-- single step. The current iris-lean only ships the two
+-- outcome-specific lemmas `wp_cmpXchg_fail` and `wp_cmpXchg_true`.
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisite lands):
 --   Example cmpXchg_0_to_10 (l : loc) : expr := (CmpXchg #l #0 #10).
 --   Lemma cmpXchg_0_to_10_spec (l : loc) (v : val) :
 --     l ↦ v -∗
@@ -266,10 +265,10 @@ To compose specifications, we use `wp_bind` to focus on a
 sub-expression and `wp_wand` (a generic WP lemma in
 `Iris.ProgramLogic.WeakestPre`) to weaken the postcondition.
 
-The Rocq tutorial's idiomatic style is to give a *postcondition-
-generic* specification — one parametric in `Φ` — that can be
-applied with `iapply`. Here is the same idiom applied to our
-`writeread` program from the previous section.
+The idiomatic style is to give a *postcondition-generic*
+specification — one parametric in `Φ` — that can be applied with
+`iapply`. Here is that idiom applied to our `writeread` program
+from the previous section.
 
 ```savedLean
 theorem writeread_spec_2 (Φ : Val → IProp GF) :
@@ -290,9 +289,10 @@ theorem writeread_spec_2 (Φ : Val → IProp GF) :
 -- TODO (upstream — iris-lean): port a `wp_apply` convenience
 -- tactic that combines `wp_bind` + `iapply`. The hand-written
 -- composition currently used in client proofs works but is
--- uglier than the Rocq tutorial's `wp_apply writeread_spec_2`.
+-- more verbose than a single `wp_apply writeread_spec_2` would be.
 
--- Rocq tutorial reference (composing two specs):
+-- Reference implementation, composing two specs (to port once the
+-- prerequisite lands):
 --   Lemma prog_add_2_spec'' : ⊢ WP prog + #2 {{ v, ⌜v = #5⌝ }}.
 --   Proof.
 --     wp_apply prog_spec_2.
@@ -310,8 +310,8 @@ about the postcondition. Hoare triples build on weakest
 preconditions by requiring us to explicitly mention the
 precondition.
 
-The Rocq syntax is `{{{ P }}} e {{{ x .. y, RET v ; Q }}}`. It
-desugars to
+A Hoare triple is written `{{{ P }}} e {{{ x .. y, RET v ; Q }}}`.
+It desugars to
 
 ```
 □ (∀ Φ, P -∗ ▷ (∀ x .. y, Q -∗ Φ v) -∗ WP e {{ w, Φ w }})
@@ -339,7 +339,7 @@ def swap : Val := hl_val(λ x y,
 -- `wp_load`/`wp_store`, all of which work today — only the
 -- statement-level sugar is missing.)
 
--- Rocq tutorial reference:
+-- Reference implementation (to port once the prerequisite lands):
 --   Lemma swap_spec (l1 l2 : loc) (v1 v2 : val) :
 --     {{{ l1 ↦ v1 ∗ l2 ↦ v2 }}}
 --       swap #l1 #l2
@@ -368,8 +368,8 @@ program forks two threads that each write to a separate location.
 iris-lean's port of the `par` library
 (`Iris.HeapLang.Lib.Par`) provides:
 
-* the parallel-composition operator `e1 ‖ e2` (Rocq tutorial:
-  `e1 ||| e2`);
+* the parallel-composition operator `e1 ‖ e2`, which runs `e1` and
+  `e2` concurrently and returns the pair of their results;
 * the `wp_par` lemma which lifts pairs of WP specifications for
   the two threads to a WP specification of their composition;
 * the `SpawnG GF` class capturing the resources `par` needs.
@@ -416,11 +416,10 @@ purely from the values returned by the two threads).
 end ParExamples
 ```
 
-The Rocq tutorial's full `par_client` example wraps this pattern
-inside a larger `let` chain that also multiplies the two final
-values to assert `21 * 2 = 42`. That multiplication still depends
-on a `PureExec` instance for `*` on integers, which iris-lean does
-not yet ship.
+A fuller `par_client` example wraps this pattern inside a larger
+`let` chain that also multiplies the two final values to assert
+`21 * 2 = 42`. That multiplication still depends on a `PureExec`
+instance for `*` on integers, which iris-lean does not yet ship.
 
 ```
 -- TODO (upstream — iris-lean): once `PureExec` for arithmetic
