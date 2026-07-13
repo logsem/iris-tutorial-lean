@@ -216,7 +216,6 @@ theorem reverse_append_spec (l acc : Val) (xs ys : List Val) (Φ : Val → IProp
       itrivial
     iapply IH $$ Hl Hnode
     iintro %v Hv
-    wp_finish
     simp only [List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
     iapply HΦ $$ Hv
 ```
@@ -239,7 +238,6 @@ theorem reverse_spec (l : Val) (xs : List Val) (Φ : Val → IProp GF) :
     itrivial
   iapply reverse_append_spec $$ Hl Hacc
   iintro %v Hv
-  wp_finish
   simp only [List.append_nil]
   iapply HΦ $$ Hv
 ```
