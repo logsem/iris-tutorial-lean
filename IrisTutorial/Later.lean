@@ -170,7 +170,7 @@ so-called *timeless* propositions, and the `wp_*` tactics are aware of
 this fact. We study timeless propositions further in a separate
 chapter.
 
-## Löb Induction
+# Löb Induction
 
 The later modality allows for a strong induction principle called Löb
 induction. Essentially, Löb induction states that to prove a
