@@ -114,3 +114,106 @@ theorem later_impl (P Q : IProp σ) : P ∗ ▷ (P -∗ Q) -∗ ▷ Q := by
 ```savedLean
 end later_general
 ```
+
+# Tying Later to Program Steps
+
+A somewhat important clarification is that the later modality exists
+independently of the specific language Iris is instantiated with; the
+later modality is part of the Iris base logic. However, when
+instantiating Iris with a language, the obvious choice is to tie a
+single `▷` to a single program step. This is also the choice that has
+been made for HeapLang – every time we use one of the `wp_*` tactics to
+symbolically execute a single step, we let time tick one unit forward,
+stripping away a single `▷` from our hypotheses.
+
+To see this in action, let us look at a simple program: `#1 + #2 * #3`.
+This program takes two steps to evaluate, so we can prove that if a
+proposition holds after two steps, it will hold after the program has
+terminated.
+
+```savedLean
+section later_specs
+open Iris HeapLang Par
+variable [HeapLangGS hlc GF]
+```
+
+```savedLean
+theorem take_2_steps (P: IProp GF):
+  ▷ ▷ P -∗ WP (hl(#1 + #2 * #3)) {{ _v, P }} := by
+  iintro P
+  wp_pure; wp_pure
+  itrivial
+```
+
+The reason this works is that under the hood of `WP`, there is a later
+for every step of the program. Thus, the `wp_*` tactics can use the
+properties mentioned in the previous section to remove laters from the
+context, similarly to `inext`.
+
+Further, it turns out that in many cases, a `▷` on an assumption can
+be safely ignored. For instance, in the example below, we only own the
+points-to predicate *later*, yet we can still perform the load.
+
+```savedLean
+theorem later_points_to (l : Loc):
+  ▷ (l ↦ hl_val(#5)) -∗ WP hl(!#l + #1) {{v, ⌜v = hl_val(#6)⌝}} := by
+  iintro Hl
+  wp_bind !#l
+  iapply wp_load $$ Hl
+  iintro !> Hl
+  wp_pure
+  itrivial
+```
+
+The technical reason for this is that points-to predicates are
+so-called *timeless* propositions, and the `wp_*` tactics are aware of
+this fact. We study timeless propositions further in a separate
+chapter.
+
+## Löb Induction
+
+The later modality allows for a strong induction principle called Löb
+induction. Essentially, Löb induction states that to prove a
+proposition `P`, we are allowed to assume that `P` holds later, i.e.
+`▷ P`. Formally, we have `□ (▷ P -∗ P) -∗ P`. Recall that `▷`
+represents a single step in the logic. Löb induction essentially
+performs induction in the number of steps. Intuitively, Löb induction
+states that if we can show that whenever `P` holds for strictly
+smaller than `n` steps, we can prove that `P` holds for `n` steps,
+then `P` holds for all steps.
+
+We can use this principle to prove many properties of recursive
+programs. To see this in action, we will define a simple recursive
+function that increments a counter.
+
+```savedLean
+def count: Val := hl_val%
+  rec cnt x := cnt (x + #1)
+```
+
+This function never terminates for any input as it will keep calling
+itself with larger and larger inputs. To show this, we pick the
+postcondition `False`. We can now use Löb induction, along with
+`wp_rec`, to prove this specification.
+
+```savedLean
+theorem count_spec (x : Int): ⊢@{IProp GF} WP hl(&count #x) {{_v, False}} := by
+  /-  The tactic for Löb induction, `iloeb`, requires us to specify the
+      name of the induction hypothesis, which we here call `IH`.
+      Optionally, it can also universally quantify over any of our variables
+      before performing induction. We here universally quantify over `x` as it
+      changes for every recursive call. -/
+  iloeb as IH generalizing %x
+  /-  `iloeb` automatically introduces the universally quantified variables in
+      the goal, so we can proceed to execute the function. -/
+  wp_rec
+  wp_pures
+  /-  Since we have taken steps, the `▷` in our induction hypothesis has
+      been stripped, allowing us to apply the hypothesis for the recursive
+      call. -/
+  iapply IH
+```
+
+```savedLean
+end later_specs
+```
