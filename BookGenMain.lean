@@ -81,10 +81,21 @@ where
     | .para .. | .code .. => pure ()
 
 
+/-- Overrides Verso's default styling, which lumps comments in with numbers,
+punctuation, etc. under the generic code color. -/
+def extraStyle : String := "
+.hl.lean .comment {
+  color: #6a9955;
+  font-style: italic;
+}
+"
+
+open Verso.Output.Html in
 def config : RenderConfig where
   emitTeX := false
   emitHtmlSingle := .no
   emitHtmlMulti := .immediately
   htmlDepth := 1
+  extraHead := #[{{<style>{{Verso.Output.Html.text false extraStyle}}</style>}}]
 
 def main := manualMain (%doc IrisTutorialBook) (extraSteps := [buildExercises]) (config := config)
