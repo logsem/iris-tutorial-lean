@@ -57,7 +57,8 @@ tactic, which introduces a later while stripping laters from our
 hypotheses.
 
 ```savedLean
-theorem later_mono (P Q : IProp σ): (Q ⊢ P) → (▷ Q ⊢ ▷ P) := by
+theorem later_mono (P Q : IProp σ) :
+    (Q ⊢ P) → (▷ Q ⊢ ▷ P) := by
   intro qp
   iintro q
   inext
@@ -70,7 +71,8 @@ tactic can be invoked with the introduction pattern `!>`, making it
 less verbose to handle the later modality.
 
 ```savedLean
-theorem later_mono' (P Q : IProp σ) : (Q ⊢ P) → (▷ Q ⊢ ▷ P) := by
+theorem later_mono' (P Q : IProp σ) :
+    (Q ⊢ P) → (▷ Q ⊢ ▷ P) := by
   intro qp
   iintro q !>
   iapply qp $$ q
@@ -93,7 +95,8 @@ by `∃` and `∀`. This means we can destruct these constructs
 regardless of being prefaced by any laters.
 
 ```savedLean
-theorem later_sep (P Q: IProp σ): ▷ (P ∗ Q) ⊣⊢ ▷ P ∗ ▷ Q := by
+theorem later_sep (P Q : IProp σ) :
+    ▷ (P ∗ Q) ⊣⊢ ▷ P ∗ ▷ Q := by
   isplit
   . iintro ⟨p, q⟩
     iframe
@@ -106,7 +109,8 @@ As a consequence of monotonicity, weakening, and distribution over
 that do not have a later on them.
 
 ```savedLean
-theorem later_impl (P Q : IProp σ) : P ∗ ▷ (P -∗ Q) -∗ ▷ Q := by
+theorem later_impl (P Q : IProp σ) :
+    P ∗ ▷ (P -∗ Q) -∗ ▷ Q := by
   -- Exercise
   sorry
 ```
@@ -156,7 +160,8 @@ points-to predicate *later*, yet we can still perform the load.
 
 ```savedLean
 theorem later_points_to (l : Loc):
-  ▷ (l ↦ hl_val(#5)) -∗ WP hl(!#l + #1) {{v, ⌜v = hl_val(#6)⌝}} := by
+  ▷ (l ↦ hl_val(#5)) -∗
+    WP hl(!#l + #1) {{v, ⌜v = hl_val(#6)⌝}} := by
   iintro Hl
   wp_bind !#l
   iapply wp_load $$ Hl
@@ -197,20 +202,23 @@ postcondition `False`. We can now use Löb induction, along with
 `wp_rec`, to prove this specification.
 
 ```savedLean
-theorem count_spec (x : Int): ⊢@{IProp GF} WP hl(&count #x) {{_v, False}} := by
-  /-  The tactic for Löb induction, `iloeb`, requires us to specify the
-      name of the induction hypothesis, which we here call `IH`.
-      Optionally, it can also universally quantify over any of our variables
-      before performing induction. We here universally quantify over `x` as it
+theorem count_spec (x : Int) :
+    ⊢@{IProp GF} WP hl(&count #x) {{_v, False}} := by
+  /-  The tactic for Löb induction, `iloeb`, requires us to
+      specify the name of the induction hypothesis, which we
+      here call `IH`. Optionally, it can also universally
+      quantify over any of our variables before performing
+      induction. We here universally quantify over `x` as it
       changes for every recursive call. -/
   iloeb as IH generalizing %x
-  /-  `iloeb` automatically introduces the universally quantified variables in
-      the goal, so we can proceed to execute the function. -/
+  /-  `iloeb` automatically introduces the universally
+      quantified variables in the goal, so we can proceed to
+      execute the function. -/
   wp_rec
   wp_pures
-  /-  Since we have taken steps, the `▷` in our induction hypothesis has
-      been stripped, allowing us to apply the hypothesis for the recursive
-      call. -/
+  /-  Since we have taken steps, the `▷` in our induction
+      hypothesis has been stripped, allowing us to apply
+      the hypothesis for the recursive call. -/
   iapply IH
 ```
 
