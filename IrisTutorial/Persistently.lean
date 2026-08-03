@@ -98,7 +98,8 @@ By contrast, putting `HP` into the spatial context discards
 persistency:
 
 ```savedLean
-theorem not_in_pers_context (P Q : IProp GF) [Persistent P] :
+theorem not_in_pers_context
+    (P Q : IProp GF) [Persistent P] :
     P -∗ Q -∗ P ∗ Q := by
   iintro HP HQ
   isplitr [HQ]
@@ -109,7 +110,8 @@ theorem not_in_pers_context (P Q : IProp GF) [Persistent P] :
 Persistent propositions are duplicable.
 
 ```savedLean
-theorem pers_dup (P : IProp GF) [Persistent P] : P ⊢ P ∗ P := by
+theorem pers_dup
+    (P : IProp GF) [Persistent P] : P ⊢ P ∗ P := by
   iintro #HP
   isplit
   · iexact HP
@@ -152,11 +154,13 @@ persistently modality is idempotent.
 theorem pers_idemp (P : IProp GF) : □ □ P ⊣⊢ □ P := by
   isplit
   · iintro #HP
-    -- Iris already knows that `□` is idempotent, so it
-    -- automatically removes all persistently modalities from a
-    -- proposition when adding it to the intuitionistic context.
-    -- One may think of all propositions in the intuitionistic
-    -- context as having an implicit `□` in front.
+    -- Iris already knows that `□` is idempotent, so
+    -- it automatically removes all persistently
+    -- modalities from a proposition when adding it
+    -- to the intuitionistic context.
+    -- One may think of all propositions in the
+    -- intuitionistic context as having an implicit
+    -- `□` in front.
     iexact HP
   · iintro #HP
     imodintro
@@ -169,7 +173,8 @@ for pure propositions, `Persistent` can automatically identify
 most persistent propositions.
 
 ```savedLean
-theorem pers_sep (P Q : IProp GF) : □ P ∗ □ Q ⊣⊢ □ (P ∗ Q) := by
+theorem pers_sep (P Q : IProp GF) :
+    □ P ∗ □ Q ⊣⊢ □ (P ∗ Q) := by
   isplit
   · iintro ⟨#HP, #HQ⟩
     imodintro
@@ -184,7 +189,8 @@ a persistent separation directly in the cases pattern.
 Persistency is preserved by quantifications.
 
 ```savedLean
-theorem pers_all {α : Type} (P : α → IProp GF) [∀ x, Persistent (P x)] :
+theorem pers_all {α : Type}
+    (P : α → IProp GF) [∀ x, Persistent (P x)] :
     (∀ x, □ P x) ⊢ ∀ y, P y ∗ P y := by
   iintro #Hp %y
   isplitl
@@ -196,7 +202,8 @@ For simple predicates such as the one below, Lean's typeclass
 resolution can automatically infer the `Persistent` instance.
 
 ```savedLean
-def myPredicate (x : Val) : IProp GF := iprop(⌜x = hl_val(#5)⌝)
+def myPredicate (x : Val) : IProp GF :=
+  iprop(⌜x = hl_val(#5)⌝)
 
 instance myPredicate_persistent (x : Val) :
     Persistent (myPredicate (GF := GF) x) := by
@@ -236,10 +243,12 @@ as persistent.
 theorem first_is_5 (x : Val) (xs : List Val) :
     myPredFix (GF := GF) (x :: xs) -∗
     ⌜x = hl_val(#5)⌝ ∗ myPredFix (x :: xs) := by
-  -- After `iintro #H`, the hypothesis `H : myPredFix (x :: xs)`
-  -- sits in the intuitionistic context. Since `myPredFix` unfolds
-  -- by pattern-matching, we can `change` the hypothesis-to-be so
-  -- the destructure exposes the head element.
+  -- After `iintro #H`, the hypothesis
+  -- `H : myPredFix (x :: xs)` sits in the
+  -- intuitionistic context. Since `myPredFix`
+  -- unfolds by pattern-matching, we can `change`
+  -- the hypothesis-to-be so the destructure
+  -- exposes the head element.
   show myPredFix (GF := GF) (x :: xs) -∗
        iprop(⌜x = hl_val(#5)⌝ ∗ myPredFix (x :: xs))
   change iprop(⌜x = hl_val(#5)⌝ ∗ myPredFix xs) -∗

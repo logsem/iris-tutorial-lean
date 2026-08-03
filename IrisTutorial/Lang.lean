@@ -70,14 +70,16 @@ def arith : Exp := hl(#1 + #2 * #3)
 The expected result of evaluating `arith` is `7`.
 
 ```savedLean
-def booleans : Exp := hl((#1 + #2 * #3 = #7) && #true || (#true = #false))
+def booleans : Exp :=
+  hl((#1 + #2 * #3 = #7) && #true || (#true = #false))
 ```
 
 The expected result is `#true`.
 
 ```savedLean
--- TODO (upstream — iris-lean): use the unit literal here once the
--- `hl` DSL gains a sugared form for `Val.lit BaseLit.unit`.
+-- TODO (upstream — iris-lean): use the unit
+-- literal here once the `hl` DSL gains a sugared form
+-- for `Val.lit BaseLit.unit`.
 def if_then_else : Exp := hl(if #true then #1 else #0)
 ```
 
@@ -150,7 +152,8 @@ def lambda : Exp :=
 
 ```savedLean
 def recursion : Exp :=
-  hl(let fac := (rec f n := if n = #0 then #1 else n * f (n - #1));
+  hl(let fac :=
+       (rec f n := if n = #0 then #1 else n * f (n - #1));
      (fac #4, fac #5))
 ```
 
@@ -209,8 +212,8 @@ compare-and-set, written `cas(l, v1, v2)`. The only difference is
 that `cas` only returns the boolean.
 
 ```savedLean
--- TODO (upstream — iris-lean): use the unit literal in the success
--- branches once the `hl` DSL gains a `#()` form.
+-- TODO (upstream — iris-lean): use the unit literal in the
+-- success branches once the `hl` DSL gains a `#()` form.
 def cas_example : Exp := hl(
   let l := ref(#5);
   if cas(l, #6, #7) then #0 else

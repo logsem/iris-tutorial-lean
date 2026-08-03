@@ -198,7 +198,8 @@ is the Iris version of modus ponens. It is provable using only
 `iintro` and `iapply`.
 
 ```savedLean
-theorem modus_ponens (P Q : IProp GF) : P -∗ (P -∗ Q) -∗ Q := by
+theorem modus_ponens (P Q : IProp GF) :
+    P -∗ (P -∗ Q) -∗ Q := by
   iintro HP HPQ
   iapply HPQ
   iexact HP
@@ -313,7 +314,8 @@ Elimination of existentials uses the pattern `%x` (with a `%` in front
 of the bound variable) to move it to the pure (Lean) context.
 
 ```savedLean
-theorem sep_ex_distr {α : Type} (P : IProp GF) (Φ : α → IProp GF) :
+theorem sep_ex_distr {α : Type} (P : IProp GF)
+    (Φ : α → IProp GF) :
     (P ∗ ∃ x, Φ x) ⊣⊢ ∃ x, P ∗ Φ x := by
   isplit
   · iintro ⟨HP, %x, HΦ⟩
