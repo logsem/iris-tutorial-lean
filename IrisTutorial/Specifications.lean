@@ -92,7 +92,8 @@ def boolish : Exp := hl(
 ```
 
 ```savedLean
-theorem boolish_spec : ⊢@{IProp GF} WP boolish {{ v, ⌜v = hl_val(#1)⌝ }} := by
+theorem boolish_spec :
+    ⊢@{IProp GF} WP boolish {{ v, ⌜v = hl_val(#1)⌝ }} := by
   unfold boolish
   wp_pures
   itrivial
@@ -145,7 +146,8 @@ def hofun : Exp :=
 ```
 
 ```savedLean
-theorem hofun_spec : ⊢@{IProp GF} WP hofun {{ v, ⌜v = hl_val(#5)⌝ }} := by
+theorem hofun_spec :
+    ⊢@{IProp GF} WP hofun {{ v, ⌜v = hl_val(#5)⌝ }} := by
   unfold hofun
   wp_pures
   itrivial
@@ -215,7 +217,8 @@ def writeread : Exp := hl(
 
 ```savedLean
 theorem writeread_spec :
-    ⊢@{IProp GF} WP writeread {{ v, ⌜v = hl_val(#7)⌝ }} := by
+    ⊢@{IProp GF} WP writeread
+      {{ v, ⌜v = hl_val(#7)⌝ }} := by
   unfold writeread
   wp_bind ref(_)
   iapply wp_alloc
@@ -272,7 +275,8 @@ from the previous section.
 
 ```savedLean
 theorem writeread_spec_2 (Φ : Val → IProp GF) :
-    (∀ v, ⌜v = hl_val(#7)⌝ -∗ Φ v) -∗ WP writeread {{ v, Φ v }} := by
+    (∀ v, ⌜v = hl_val(#7)⌝ -∗ Φ v) -∗
+    WP writeread {{ v, Φ v }} := by
   iintro HΦ
   unfold writeread
   wp_bind ref(_)
@@ -389,7 +393,8 @@ def parWrite (l1 l2 : Loc) : Exp :=
 theorem parWrite_spec (l1 l2 : Loc) (v1 v2 : Val) :
     l1 ↦ some v1 -∗ l2 ↦ some v2 -∗
     WP (parWrite l1 l2)
-      {{ v, l1 ↦ some hl_val(#21) ∗ l2 ↦ some hl_val(#2) }} := by
+      {{ v, l1 ↦ some hl_val(#21) ∗
+            l2 ↦ some hl_val(#2) }} := by
   iintro Hl1 Hl2
   unfold parWrite
   iapply wp_par

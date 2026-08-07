@@ -53,7 +53,8 @@ values it represents.
 ```savedLean
 def isList (l : Val) : List Val → IProp GF
   | [] => iprop% ⌜l = hl_val(none())⌝
-  | x :: xs => iprop% ∃ hd l', ⌜l = hl_val(some(#(.loc hd)))⌝ ∗
+  | x :: xs => iprop% ∃ hd l',
+      ⌜l = hl_val(some(#(.loc hd)))⌝ ∗
       hd ↦ some hl_val((&x, &l')) ∗ isList l' xs
 ```
 
@@ -63,7 +64,8 @@ unfold and refold the predicate during proofs.
 
 ```savedLean
 theorem isList_nil {l} :
-    isList (GF := GF) l [] ⊣⊢ iprop(⌜l = hl_val(none())⌝) := .rfl
+    isList (GF := GF) l [] ⊣⊢
+      iprop(⌜l = hl_val(none())⌝) := .rfl
 ```
 
 ```savedLean
@@ -102,7 +104,8 @@ specification in postcondition-generic form — parametric in `Φ` and
 applied with `iapply`.
 
 ```savedLean
-theorem append_spec (l1 l2 : Val) (xs ys : List Val) (Φ : Val → IProp GF) :
+theorem append_spec (l1 l2 : Val) (xs ys : List Val)
+    (Φ : Val → IProp GF) :
     isList l1 xs -∗ isList l2 ys -∗
     (∀ v, isList v (xs ++ ys) -∗ Φ v) -∗
     WP hl(&append &l1 &l2) {{ Φ }} := by
@@ -179,7 +182,8 @@ induction. Unlike `append`, the accumulator `acc` and its list `ys`
 change on every recursive call, so we generalise over them too.
 
 ```savedLean
-theorem reverse_append_spec (l acc : Val) (xs ys : List Val) (Φ : Val → IProp GF) :
+theorem reverse_append_spec (l acc : Val)
+    (xs ys : List Val) (Φ : Val → IProp GF) :
     isList l xs -∗ isList acc ys -∗
     (∀ v, isList v (xs.reverse ++ ys) -∗ Φ v) -∗
     WP hl(&reverse_append &l &acc) {{ Φ }} := by
@@ -209,14 +213,17 @@ theorem reverse_append_spec (l acc : Val) (xs ys : List Val) (Φ : Val → IProp
     iintro !> Hpt
     wp_pures
     wp_bind (&reverse_append _ _)
-    ihave Hnode : isList hl_val(some(#(.loc hd))) (x :: ys) $$ [Hpt Hacc]
+    ihave Hnode :
+        isList hl_val(some(#(.loc hd))) (x :: ys) $$
+          [Hpt Hacc]
     · rw [isList]
       iexists hd, acc
       iframe
       itrivial
     iapply IH $$ Hl Hnode
     iintro %v Hv
-    simp only [List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
+    simp only [List.reverse_cons, List.append_assoc,
+      List.cons_append, List.nil_append]
     iapply HΦ $$ Hv
 ```
 
@@ -225,7 +232,8 @@ accumulator represents the empty list, so `reverse l` returns the
 reverse of `l`.
 
 ```savedLean
-theorem reverse_spec (l : Val) (xs : List Val) (Φ : Val → IProp GF) :
+theorem reverse_spec (l : Val) (xs : List Val)
+    (Φ : Val → IProp GF) :
     isList l xs -∗
     (∀ v, isList v xs.reverse -∗ Φ v) -∗
     WP hl(&reverse &l) {{ Φ }} := by
@@ -279,13 +287,17 @@ it can be reused at every step of the induction.
 
 ```savedLean
 theorem fold_right_spec
-    (P : Val → IProp GF) (I : List Val → Val → IProp GF) (f a l : Val) (xs : List Val)
+    (P : Val → IProp GF)
+    (I : List Val → Val → IProp GF)
+    (f a l : Val) (xs : List Val)
     (Φ : Val → IProp GF) :
     isList l xs -∗
     ([∗list] _k ↦ x ∈ xs, P x) -∗
     I [] a -∗
     □ (∀ (x a' : Val) ys (Ψ : Val → IProp GF),
-        P x -∗ I ys a' -∗ (∀ r, I (x :: ys) r -∗ Ψ r) -∗ WP hl(&f &x &a') {{ Ψ }}) -∗
+        P x -∗ I ys a' -∗
+        (∀ r, I (x :: ys) r -∗ Ψ r) -∗
+        WP hl(&f &x &a') {{ Ψ }}) -∗
     (∀ r, isList l xs -∗ I xs r -∗ Φ r) -∗
     WP hl(&fold_right &f &a &l) {{ Φ }} := by
   iintro Hl HP HI #Hf HΦ
