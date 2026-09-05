@@ -31,9 +31,10 @@ pending translation from their Rocq sources.
 
 ## Building
 
-The Lean toolchain is pinned in `lean-toolchain` (`leanprover/lean4:4.30.0`).
-`verso` and `iris-lean` are pinned in `lakefile.toml`; the three versions
-must stay in lockstep.
+The Lean toolchain is pinned to `leanprover/lean4:v4.32.2` in `lean-toolchain`,
+matching iris-lean. `lakefile.toml` pins iris-lean to upstream HEAD as of
+2026-09-05 (`728a17140939e49af9236f7cb0d037da9ec52435`) and Verso to
+`v4.32.0`. Keep dependency revisions compatible with the toolchain.
 
 | Command | What it does |
 | --- | --- |

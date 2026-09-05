@@ -98,15 +98,13 @@ If `l1` and `l2` represent the lists `xs` and `ys` respectively, then
 `append l1 l2` returns a list representing `xs ++ ys`.
 
 Following the convention from the specifications chapter, we state the
-specification in postcondition-generic form — parametric in `Φ` and
-applied with `iapply`.
+specification as a Hoare triple and use `wp_apply` at recursive calls.
 
 ```savedLean
-theorem append_spec (l1 l2 : Val) (xs ys : List Val) (Φ : Val → IProp GF) :
-    isList l1 xs -∗ isList l2 ys -∗
-    (∀ v, isList v (xs ++ ys) -∗ Φ v) -∗
-    WP hl(&append &l1 &l2) {{ Φ }} := by
-  iintro Hl1 Hl2 HΦ
+theorem append_spec (l1 l2 : Val) (xs ys : List Val) :
+    {{ isList (GF := GF) l1 xs ∗ isList l2 ys }} hl(&append &l1 &l2)
+    {{ v, RET v; isList v (xs ++ ys) }} := by
+  iintro %Φ ⟨Hl1, Hl2⟩ HΦ
   iloeb as IH generalizing %l1 %xs %Φ
   wp_bind (&append _)
   wp_rec
@@ -119,21 +117,13 @@ theorem append_spec (l1 l2 : Val) (xs ys : List Val) (Φ : Val → IProp GF) :
   | cons x xs =>
     icases isList_cons $$ Hl1 with ⟨%hd, %l', %heq, Hpt, Hl⟩
     subst heq; wp_pures
-    wp_bind !_
-    iapply wp_load $$ Hpt
-    iintro !> Hpt
+    wp_load
     wp_pures
-    wp_bind !_
-    iapply wp_load $$ Hpt
-    iintro !> Hpt
+    wp_load
     wp_pures
-    wp_bind (&append _ _)
-    iapply IH $$ Hl Hl2
-    iintro %r Hr
+    wp_apply IH $$ Hl Hl2 with %r Hr
     wp_pures
-    wp_bind (_ ← _)
-    iapply wp_store $$ Hpt
-    iintro !> Hpt
+    wp_store
     wp_pures
     imodintro
     iapply HΦ
@@ -149,7 +139,7 @@ The proof proceeds by Löb induction (`iloeb`), generalising over `l1`,
 recursive call. The curried recursive function is stepped with
 `wp_bind (&append _)` followed by `wp_rec`, which unfolds one call and
 β-reduces past the first argument. At the recursive call we focus the
-sub-expression with `wp_bind (&append _ _)` and discharge it with `IH`.
+sub-expression with `wp_apply IH`, which also applies the induction hypothesis.
 
 # Reverse
 
@@ -179,11 +169,10 @@ induction. Unlike `append`, the accumulator `acc` and its list `ys`
 change on every recursive call, so we generalise over them too.
 
 ```savedLean
-theorem reverse_append_spec (l acc : Val) (xs ys : List Val) (Φ : Val → IProp GF) :
-    isList l xs -∗ isList acc ys -∗
-    (∀ v, isList v (xs.reverse ++ ys) -∗ Φ v) -∗
-    WP hl(&reverse_append &l &acc) {{ Φ }} := by
-  iintro Hl Hacc HΦ
+theorem reverse_append_spec (l acc : Val) (xs ys : List Val) :
+    {{ isList (GF := GF) l xs ∗ isList acc ys }} hl(&reverse_append &l &acc)
+    {{ v, RET v; isList v (xs.reverse ++ ys) }} := by
+  iintro %Φ ⟨Hl, Hacc⟩ HΦ
   iloeb as IH generalizing %l %acc %xs %ys %Φ
   wp_bind (&reverse_append _)
   wp_rec
@@ -196,26 +185,18 @@ theorem reverse_append_spec (l acc : Val) (xs ys : List Val) (Φ : Val → IProp
   | cons x xs =>
     icases isList_cons $$ Hl with ⟨%hd, %l', %heq, Hpt, Hl⟩
     subst heq; wp_pures
-    wp_bind !_
-    iapply wp_load $$ Hpt
-    iintro !> Hpt
+    wp_load
     wp_pures
-    wp_bind !_
-    iapply wp_load $$ Hpt
-    iintro !> Hpt
+    wp_load
     wp_pures
-    wp_bind (_ ← _)
-    iapply wp_store $$ Hpt
-    iintro !> Hpt
+    wp_store
     wp_pures
-    wp_bind (&reverse_append _ _)
     ihave Hnode : isList hl_val(some(#(.loc hd))) (x :: ys) $$ [Hpt Hacc]
     · rw [isList]
       iexists hd, acc
       iframe
       itrivial
-    iapply IH $$ Hl Hnode
-    iintro %v Hv
+    wp_apply IH $$ Hl Hnode with %v Hv
     simp only [List.reverse_cons, List.append_assoc, List.cons_append, List.nil_append]
     iapply HΦ $$ Hv
 ```
@@ -225,21 +206,19 @@ accumulator represents the empty list, so `reverse l` returns the
 reverse of `l`.
 
 ```savedLean
-theorem reverse_spec (l : Val) (xs : List Val) (Φ : Val → IProp GF) :
-    isList l xs -∗
-    (∀ v, isList v xs.reverse -∗ Φ v) -∗
-    WP hl(&reverse &l) {{ Φ }} := by
-  iintro Hl HΦ
+theorem reverse_spec (l : Val) (xs : List Val) :
+    {{ isList (GF := GF) l xs }} hl(&reverse &l)
+    {{ v, RET v; isList v xs.reverse }} := by
+  iintro %Φ Hl HΦ
   wp_rec
   wp_pures
-  wp_bind (&reverse_append _ _)
   ihave Hacc : isList hl_val(none()) ([] : List Val) $$ []
   · iapply isList_nil
     itrivial
-  iapply reverse_append_spec $$ Hl Hacc
-  iintro %v Hv
-  simp only [List.append_nil]
-  iapply HΦ $$ Hv
+  wp_apply reverse_append_spec $$ [Hl Hacc] with %v Hv
+  · iframe
+  · simp only [List.append_nil]
+    iapply HΦ $$ Hv
 ```
 
 # Folding Over a List
@@ -268,27 +247,24 @@ The specification has many moving parts, so let us go through them.
 * `I` (think *invariant*) relates a list to the result of the fold; the
   base value satisfies `I [] a`.
 * `f` is the folding function, assumed to satisfy a (persistent)
-  postcondition-generic specification: given `P x` and `I ys a'`, the
+  Hoare triple: given `P x` and `I ys a'`, the
   call `f x a'` returns `r` with `I (x :: ys) r`.
 * The result `r` of the whole fold satisfies `I xs r`.
 * Importantly, the original list is left unchanged, so `isList l xs`
   reappears in the postcondition.
 
-The assumption for `f` is written as a persistent (boxed) hypothesis so
-it can be reused at every step of the induction.
+The assumption for `f` is a family of Hoare triples. These are persistent,
+so `#Hf` can be reused at every step of the induction.
 
 ```savedLean
 theorem fold_right_spec
-    (P : Val → IProp GF) (I : List Val → Val → IProp GF) (f a l : Val) (xs : List Val)
-    (Φ : Val → IProp GF) :
-    isList l xs -∗
-    ([∗list] _k ↦ x ∈ xs, P x) -∗
-    I [] a -∗
-    □ (∀ (x a' : Val) ys (Ψ : Val → IProp GF),
-        P x -∗ I ys a' -∗ (∀ r, I (x :: ys) r -∗ Ψ r) -∗ WP hl(&f &x &a') {{ Ψ }}) -∗
-    (∀ r, isList l xs -∗ I xs r -∗ Φ r) -∗
-    WP hl(&fold_right &f &a &l) {{ Φ }} := by
-  iintro Hl HP HI #Hf HΦ
+    (P : Val → IProp GF) (I : List Val → Val → IProp GF) (f a l : Val) (xs : List Val) :
+    (∀ (x a' : Val) ys,
+      {{ P x ∗ I ys a' }} hl(&f &x &a') {{ r, RET r; I (x :: ys) r }}) -∗
+    {{ isList (GF := GF) l xs ∗ ([∗list] _k ↦ x ∈ xs, P x) ∗ I [] a }}
+      hl(&fold_right &f &a &l)
+    {{ r, RET r; isList l xs ∗ I xs r }} := by
+  iintro #Hf !> %Φ ⟨Hl, HP, HI⟩ HΦ
   iloeb as IH generalizing %l %a %xs %Φ
   wp_bind (&fold_right _)
   wp_rec
@@ -297,32 +273,27 @@ theorem fold_right_spec
     icases isList_nil $$ Hl with %heq; subst heq
     wp_pures; imodintro
     iapply HΦ
-    · iapply isList_nil
-      itrivial
-    · iexact HI
+    iframe HI
+    iapply isList_nil
+    itrivial
   | cons x xs =>
     icases isList_cons $$ Hl with ⟨%hd, %l', %heq, Hpt, Hl⟩
     subst heq
     icases BI.BigSepL.bigSepL_cons $$ HP with ⟨HP0, HPs⟩
     wp_pures
-    wp_bind !_
-    iapply wp_load $$ Hpt
-    iintro !> Hpt
+    wp_load
     wp_pures
-    wp_bind !_
-    iapply wp_load $$ Hpt
-    iintro !> Hpt
+    wp_load
     wp_pures
-    wp_bind (&fold_right _ _ _)
-    iapply IH $$ Hl HPs HI
-    iintro %r Hl Hr
-    iapply Hf $$ HP0 Hr
-    iintro %r' Hr'
-    iapply HΦ $$ [Hpt Hl] Hr'
-    rw [isList]
-    iexists hd, l'
-    iframe
-    itrivial
+    wp_apply IH $$ Hl HPs HI with %r ⟨Hl, Hr⟩
+    wp_apply Hf $$ [HP0 Hr] with %r' Hr'
+    · iframe
+    · iapply HΦ
+      iframe Hr'
+      rw [isList]
+      iexists hd, l'
+      iframe
+      itrivial
 ```
 
 # Arithmetic-dependent specifications
@@ -350,20 +321,10 @@ def sum_list : Val := hl_val%
     &fold_right f #0 l
 ```
 
-Both functions depend on integer arithmetic: `inc` performs `x + #1`
-and `sum_list` folds with `+`. The HeapLang program logic used here
-does not currently provide a `PureExec` instance for the arithmetic
-binary operators on integers, so `wp_pures` cannot reduce these steps,
-and the natural specifications — `inc l` increments each element, and
-`sum_list l` returns the sum — cannot yet be proved. The same
-limitation is discussed in the specifications chapter.
-
-```
--- TODO (upstream — iris-lean): register `PureExec` instances for the
--- arithmetic binary operators on `BaseLit.int`. Once they land, the
--- `inc` and `sum_list` specifications can be proved with the same
--- load/store/fold idioms used above.
-```
+Both functions use integer arithmetic, which `wp_pures` can execute.
+As further exercises, specify and prove that `inc` increments every
+integer in the list and that `sum_list` returns their sum. The
+load/store and fold specifications above provide the building blocks.
 
 ```savedLean
 end LinkedLists

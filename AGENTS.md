@@ -14,7 +14,7 @@ The repo serves two outputs from one source: the rendered HTML book, and a downl
 - `make clean` — remove `out/` and `_out/`.
 - `lake build IrisTutorial.Basics` — elaborate a single chapter module without rendering HTML. **Use this to iterate on one chapter's proofs** — much faster than a full `lake exe textbook`.
 
-The Lean toolchain is pinned in `lean-toolchain` (`leanprover/lean4:4.30.0`); `verso` and `iris-lean` are both pinned to `v4.30.0` in `lakefile.toml`. These three versions must stay in lockstep.
+The Lean toolchain is pinned in `lean-toolchain` (`leanprover/lean4:v4.32.2`), matching iris-lean. In `lakefile.toml`, `verso` is pinned to `v4.32.0` and `iris-lean` to upstream HEAD as of 2026-09-05 (`728a17140939e49af9236f7cb0d037da9ec52435`). Keep dependency revisions compatible with the toolchain.
 
 ## Architecture
 
@@ -39,7 +39,3 @@ The block *language tag* determines how a fenced block is treated:
 - ```` ```savedComment ```` — prose wrapped as a `/-! ... -/` module docstring in the extracted file.
 
 Because saved blocks are concatenated in source order into one module per chapter, the `namespace`/`open`/`variable`/`end` blocks must bracket the theorems correctly *as a sequence* — the extracted file is exactly the saved blocks joined with newlines.
-
-## Lean MCP / search
-
-`.mcp.json` wires the `lean-lsp` MCP server with a **local Loogle instance** (`LOOGLE_URL=http://localhost:8088`) and disables the hosted natural-language search tools (`lean_leansearch`, `lean_leanfinder`, `lean_state_search`, `lean_hammer_premise`). Prefer `lean_local_search`, `lean_loogle`, `lean_goal`, and `lean_hover_info`; the disabled tools will not be available.

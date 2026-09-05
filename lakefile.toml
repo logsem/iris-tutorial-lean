@@ -10,13 +10,12 @@ name = "verso"
 git = "https://github.com/leanprover/verso"
 rev = "v4.32.0"
 
-# iris-lean's v4.32.0 tag, compatible with the Lean toolchain in
-# `lean-toolchain` (leanprover/lean4:v4.32.0).
+# Pin iris-lean to upstream HEAD as of 2026-09-05.
 [[require]]
 name = "iris"
 git = "https://github.com/leanprover-community/iris-lean.git"
 subDir = "Iris"
-rev = "6a9d0cfd5d8d2fdfc36d7eb8c47d3b4bc7bea491"
+rev = "728a17140939e49af9236f7cb0d037da9ec52435"
 
 # Book generation machinery inherited from the Verso textbook template
 # (savedLean/savedImport elaborators, bibliography helpers). No root module

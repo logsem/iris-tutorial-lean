@@ -61,30 +61,21 @@ form `WP e {{ v, Φ v }}`. This asserts that if the HeapLang program
 `e` terminates at some value `v`, then `v` satisfies the predicate
 `Φ`. The double curly brackets are the *postcondition*.
 
-A natural first example is a pure arithmetic expression such as
-`#1 + #2 * #3 + #4 + #5`, symbolically executed with the
-`wp_pure`/`wp_pures` tactics, which iterate the
-`wp_pure_step_fupd` rule. However, iris-lean's HeapLang only
-provides `PureExec` instances for β-reduction, `if`/`case`/`inj`,
-pair projections, and `≤` on integers. The arithmetic operators
-have no `PureExec` instance, so `wp_pure` cannot fire on `#2 * #3`
-or any of the additions.
+A natural first example is a pure arithmetic expression. The
+`wp_pure` and `wp_pures` tactics symbolically execute pure steps,
+including integer arithmetic.
 
-```
--- TODO (upstream — iris-lean): register `PureExec` instances for
--- the arithmetic binops on `BaseLit.int` (and ideally also on
--- bit-wise / shift operators). Until then `arith_spec` cannot be
--- proved in the natural way.
+```savedLean
+def arith : Exp := hl(#1 + #2 * #3 + #4 + #5)
 
--- Reference implementation (to port once the prerequisite lands):
---   Example arith : expr := #1 + #2 * #3 + #4 + #5.
---   Lemma arith_spec : ⊢ WP arith {{ v, ⌜v = #16⌝ }}.
---   Proof. rewrite /arith. wp_op. wp_pure. wp_pures.
---          iModIntro. iPureIntro. reflexivity. Qed.
+theorem arith_spec : ⊢@{IProp GF} WP arith {{ v, ⌜v = hl_val(#16)⌝ }} := by
+  unfold arith
+  wp_op
+  wp_pures
+  itrivial
 ```
 
-To showcase the tactics that *do* work, here is the same shape of
-proof on a program that only uses β-reduction and `if`:
+The same tactic also handles β-reduction and conditionals:
 
 ```savedLean
 def boolish : Exp := hl(
@@ -113,9 +104,8 @@ After every pure step has fired, the goal is reduced to proving the
 postcondition behind a fancy-update modality `|={⊤}=>`; `itrivial`
 discharges the residual proposition `⌜#1 = #1⌝`.
 
-The `lambda` program from the previous chapter mixes lambda
-application with arithmetic. Because of the same `PureExec` gap, we
-cannot symbolically evaluate it end-to-end in iris-lean today.
+The `lambda` program from the previous chapter combines lambda
+application with arithmetic:
 
 ```savedLean
 def lambda : Exp :=
@@ -125,17 +115,14 @@ def lambda : Exp :=
      compose add5 double #5)
 ```
 
-```
--- TODO (upstream — iris-lean): same as above — `lambda` contains
--- `+` and `*`. The lambda β-reductions all work via
--- `wp_pure`/`wp_pures`, but the arithmetic reductions do not.
-
--- Reference implementation (to port once the prerequisite lands):
---   Lemma lambda_spec : ⊢ WP lambda {{ v, ⌜v = #20⌝ }}.
---   Proof. rewrite /lambda. wp_pures. done. Qed.
+```savedLean
+theorem lambda_spec : ⊢@{IProp GF} WP lambda {{ v, ⌜v = hl_val(#20)⌝ }} := by
+  unfold lambda
+  wp_pures
+  itrivial
 ```
 
-A purely β-driven analogue does prove cleanly:
+Here is a higher-order example using only β-reduction:
 
 ```savedLean
 def hofun : Exp :=
@@ -175,10 +162,7 @@ let: "x" := ref #1 in
 !"x"
 ```
 
-which both touches the heap *and* performs an addition. We can
-state and partly prove it in iris-lean, but the addition step is
-blocked by the same `PureExec` gap as above; see the per-step
-breakdown below.
+which both touches the heap and performs an addition.
 
 ```savedLean
 def prog : Exp := hl(
@@ -187,25 +171,23 @@ def prog : Exp := hl(
   !x)
 ```
 
-```
--- TODO (upstream — iris-lean): the addition `!x + #2` blocks the
--- proof. The `wp_alloc`/`wp_load`/`wp_store` rules apply fine; the
--- missing piece is reducing `(#1 : Int) + (#2 : Int)` via
--- `wp_pure`. Until `PureExec` for `+` lands, `prog_spec` cannot be
--- proved cleanly.
-
--- Reference implementation (to port once the prerequisite lands):
---   Lemma prog_spec : ⊢ WP prog {{ v, ⌜v = #3⌝ }}.
---   Proof.
---     rewrite /prog.
---     wp_alloc l as "Hl".
---     wp_let. wp_load. wp_op. wp_store. wp_load.
---     iModIntro. done.
---   Qed.
+```savedLean
+theorem prog_spec : ⊢@{IProp GF} WP prog {{ v, ⌜v = hl_val(#3)⌝ }} := by
+  unfold prog
+  wp_alloc l with Hl
+  wp_pures
+  wp_load
+  wp_pures
+  wp_store
+  wp_load
+  itrivial
 ```
 
-To at least demonstrate the heap primitives in isolation, here is a
-trivial program that allocates and then immediately reads.
+The allocation tactic names the fresh location and its points-to
+hypothesis. The load and store tactics find that hypothesis in the
+proof-mode context and update it as the program executes.
+
+For comparison, here is a program that allocates and immediately reads.
 
 ```savedLean
 def writeread : Exp := hl(
@@ -217,41 +199,38 @@ def writeread : Exp := hl(
 theorem writeread_spec :
     ⊢@{IProp GF} WP writeread {{ v, ⌜v = hl_val(#7)⌝ }} := by
   unfold writeread
-  wp_bind ref(_)
-  iapply wp_alloc
-  iintro !> %l Hl
+  wp_alloc l with Hl
   wp_pures
-  iapply wp_load $$ Hl
-  iintro !> _Hl
+  wp_load
   itrivial
 ```
 
-Each `iapply wp_alloc` / `iapply wp_load` consumes the relevant
-primitive law and the surrounding `wp_pures` advances past the
-`let` β-reductions.
+The surrounding `wp_pures` advances past the `let` β-reductions.
 
-HeapLang also provides the `cmpXchg(_, _, _)` instruction. The
-primitive-law lemmas `wp_cmpXchg_fail` and `wp_cmpXchg_true` cover
-the two outcomes, with the choice between them dispatched by side
-conditions on whether the stored value equals the test value.
+HeapLang also provides `cmpXchg(_, _, _)`. The `wp_cmpxchg` tactic
+creates success and failure branches and names their equality and
+inequality assumptions.
 
-```
--- TODO (upstream — iris-lean): port a `wp_cmpxchg` lemma (and a
--- matching tactic) that branches on the equality decision in a
--- single step. The current iris-lean only ships the two
--- outcome-specific lemmas `wp_cmpXchg_fail` and `wp_cmpXchg_true`.
+```savedLean
+def cmpXchg_0_to_10 (l : Loc) : Exp := hl(cmpXchg(#l, #0, #10))
 
--- Reference implementation (to port once the prerequisite lands):
---   Example cmpXchg_0_to_10 (l : loc) : expr := (CmpXchg #l #0 #10).
---   Lemma cmpXchg_0_to_10_spec (l : loc) (v : val) :
---     l ↦ v -∗
---     WP (cmpXchg_0_to_10 l) {{ u, (⌜v = #0⌝ ∗ l ↦ #10) ∨
---                                  (⌜v ≠ #0⌝ ∗ l ↦ v) }}.
---   Proof.
---     iIntros "Hl". wp_cmpxchg as H1 | H2.
---     - iLeft.  by iFrame.
---     - iRight. by iFrame.
---   Qed.
+theorem cmpXchg_0_to_10_spec (l : Loc) (v : Val) :
+    l ↦ some v -∗ WP (cmpXchg_0_to_10 l)
+      {{ _u, (⌜v = hl_val(#0)⌝ ∗ l ↦ some hl_val(#10)) ∨
+             (⌜v ≠ hl_val(#0)⌝ ∗ l ↦ some v) }} := by
+  iintro Hl
+  unfold cmpXchg_0_to_10
+  wp_cmpxchg with Heq Hne
+  · change (v.isUnboxed || true) = true
+    simp
+  · imodintro
+    ileft
+    iframe
+    itrivial
+  · imodintro
+    iright
+    iframe
+    itrivial
 ```
 
 The points-to predicate is *not* duplicable. That is, for every
@@ -261,43 +240,31 @@ associated with it. iris-lean exposes this via the
 
 # Composing Programs and Proofs
 
-To compose specifications, we use `wp_bind` to focus on a
-sub-expression and `wp_wand` (a generic WP lemma in
-`Iris.ProgramLogic.WeakestPre`) to weaken the postcondition.
-
-The idiomatic style is to give a *postcondition-generic*
-specification — one parametric in `Φ` — that can be applied with
-`iapply`. Here is that idiom applied to our `writeread` program
-from the previous section.
+The tactic `wp_apply` finds the evaluation context in which a
+specification applies, focuses on that sub-expression, and applies the
+specification. A postcondition-generic WP lemma is one way to expose a
+program's result to its caller:
 
 ```savedLean
 theorem writeread_spec_2 (Φ : Val → IProp GF) :
     (∀ v, ⌜v = hl_val(#7)⌝ -∗ Φ v) -∗ WP writeread {{ v, Φ v }} := by
   iintro HΦ
   unfold writeread
-  wp_bind ref(_)
-  iapply wp_alloc
-  iintro !> %l Hl
+  wp_alloc l with Hl
   wp_pures
-  iapply wp_load $$ Hl
-  iintro !> _Hl
+  wp_load
+  imodintro
   iapply HΦ
   itrivial
 ```
 
-```
--- TODO (upstream — iris-lean): port a `wp_apply` convenience
--- tactic that combines `wp_bind` + `iapply`. The hand-written
--- composition currently used in client proofs works but is
--- more verbose than a single `wp_apply writeread_spec_2` would be.
-
--- Reference implementation, composing two specs (to port once the
--- prerequisite lands):
---   Lemma prog_add_2_spec'' : ⊢ WP prog + #2 {{ v, ⌜v = #5⌝ }}.
---   Proof.
---     wp_apply prog_spec_2.
---     iIntros "%w ->". wp_pure. done.
---   Qed.
+```savedLean
+theorem writeread_add_2_spec :
+    ⊢@{IProp GF} WP hl(&writeread + #2) {{ v, ⌜v = hl_val(#9)⌝ }} := by
+  wp_apply writeread_spec_2 with %w %hw
+  subst w
+  wp_pures
+  itrivial
 ```
 
 # Hoare Triples
@@ -310,17 +277,16 @@ about the postcondition. Hoare triples build on weakest
 preconditions by requiring us to explicitly mention the
 precondition.
 
-A Hoare triple is written `{{{ P }}} e {{{ x .. y, RET v ; Q }}}`.
+A Hoare triple is written `{{ P }} e {{ x .. y, RET v; Q }}`.
 It desugars to
 
 ```
 □ (∀ Φ, P -∗ ▷ (∀ x .. y, Q -∗ Φ v) -∗ WP e {{ w, Φ w }})
 ```
 
-iris-lean does not yet ship the `{{{ P }}} e {{{ ... }}}` sugar, so
-in this port we write the desugared wand-rolled form directly. One
-loss: we don't get the persistence `□` automatically; we either add
-it by hand or skip it when the spec only needs to be applied once.
+Inside an Iris proposition, the notation includes the outer `□`, so
+triples are persistent. As a Lean theorem statement it elaborates to the
+universally quantified WP rule, introduced with `iintro %Φ`.
 
 Consider a function that swaps two values.
 
@@ -331,33 +297,36 @@ def swap : Val := hl_val(λ x y,
   y ← v)
 ```
 
-```
--- TODO (upstream — iris-lean): port the Hoare-triple notation
--- `{{{ P }}} e {{{ x .. , RET v ; Q }}}`. Until then a Hoare-
--- triple-styled specification must be written out as the
--- desugared wand-rolled WP. (The proof itself uses `wp_pures` +
--- `wp_load`/`wp_store`, all of which work today — only the
--- statement-level sugar is missing.)
+```savedLean
+theorem swap_spec (l1 l2 : Loc) (v1 v2 : Val) :
+    {{ l1 ↦ some v1 ∗ l2 ↦ some v2 }} hl(&swap #l1 #l2)
+    {{ RET hl_val(#()); l1 ↦ some v2 ∗ l2 ↦ some v1 }} := by
+  iintro %Φ ⟨H1, H2⟩ HΦ
+  unfold swap
+  wp_pures
+  wp_load
+  wp_load
+  wp_store
+  wp_store
+  imodintro
+  iapply HΦ
+  iframe
 
--- Reference implementation (to port once the prerequisite lands):
---   Lemma swap_spec (l1 l2 : loc) (v1 v2 : val) :
---     {{{ l1 ↦ v1 ∗ l2 ↦ v2 }}}
---       swap #l1 #l2
---     {{{ RET #(); l1 ↦ v2 ∗ l2 ↦ v1 }}}.
---   Proof.
---     iIntros "%Φ [H1 H2] HΦ".
---     rewrite /swap.
---     wp_pures. wp_load. wp_load. wp_store. wp_store.
---     iApply "HΦ". by iFrame.
---   Qed.
+theorem swap_swap_spec (l1 l2 : Loc) (v1 v2 : Val) :
+    {{ l1 ↦ some v1 ∗ l2 ↦ some v2 }} hl(&swap #l1 #l2; &swap #l1 #l2)
+    {{ RET hl_val(#()); l1 ↦ some v1 ∗ l2 ↦ some v2 }} := by
+  iintro %Φ H HΦ
+  wp_apply swap_spec $$ H with ⟨H1, H2⟩
+  wp_pures
+  wp_apply swap_spec $$ [H1 H2] with H
+  · iframe
+  · iapply HΦ $$ H
 ```
 
-A convention in Iris is to *write* specifications using Hoare
-triples but *prove* them by converting them to weakest preconditions.
-This convention applies equally to the iris-lean port; once the
-notation lands, the chapter's `swap_spec` and `swap_swap_spec` will
-translate without issue, because every primitive law they use is
-already in `Iris.HeapLang.PrimitiveLaws`.
+A convention in Iris is to write reusable specifications as Hoare
+triples and prove them by introducing the postcondition and executing
+program steps. The second proof uses `wp_apply` to compose two calls
+without unfolding `swap`.
 
 # Concurrency
 
@@ -389,19 +358,18 @@ def parWrite (l1 l2 : Loc) : Exp :=
 theorem parWrite_spec (l1 l2 : Loc) (v1 v2 : Val) :
     l1 ↦ some v1 -∗ l2 ↦ some v2 -∗
     WP (parWrite l1 l2)
-      {{ v, l1 ↦ some hl_val(#21) ∗ l2 ↦ some hl_val(#2) }} := by
+      {{ _v, l1 ↦ some hl_val(#21) ∗ l2 ↦ some hl_val(#2) }} := by
   iintro Hl1 Hl2
   unfold parWrite
-  iapply wp_par
+  wp_pures
+  wp_apply wp_par
       (fun _ => iprop(l1 ↦ some hl_val(#21)))
       (fun _ => iprop(l2 ↦ some hl_val(#2)))
       $$ [Hl1] [Hl2] []
-  · iapply wp_store $$ Hl1
-    iintro !> Hl1
-    iexact Hl1
-  · iapply wp_store $$ Hl2
-    iintro !> Hl2
-    iexact Hl2
+  · wp_store
+    itrivial
+  · wp_store
+    itrivial
   · iintro %v1' %v2' ⟨H1, H2⟩
     iframe
 ```
@@ -412,33 +380,44 @@ context: `Hl1` goes to the first thread, `Hl2` to the second, and
 the postcondition-handler subgoal receives nothing (it is closed
 purely from the values returned by the two threads).
 
+A larger client allocates both locations, runs the writes in parallel,
+and multiplies the final values. Its triple returns both locations and
+the computed integer, together with ownership of the final heap.
+
 ```savedLean
+def par_client : Exp := hl%
+  let l1 := ref(#0);
+  let l2 := ref(#0);
+  ((l1 ← #21) ‖ (l2 ← #2));
+  let life := !l1 * !l2;
+  (l1, l2, life)
+
+theorem par_client_spec :
+    {{ True }} par_client
+    {{ (l1 l2 : Loc) (life : Int), RET hl_val((#l1, #l2, #life));
+       l1 ↦ some hl_val(#21) ∗ l2 ↦ some hl_val(#2) ∗ ⌜life = 42⌝ }} := by
+  iintro %Φ - HΦ
+  unfold par_client
+  wp_alloc l1 with Hl1
+  wp_pures
+  wp_alloc l2 with Hl2
+  wp_pures
+  wp_apply wp_par (fun _ => l1 ↦ some hl_val(#21))
+      (fun _ => l2 ↦ some hl_val(#2)) $$ [Hl1] [Hl2] [HΦ]
+  · wp_store; itrivial
+  · wp_store; itrivial
+  · iintro %r1 %r2 ⟨Hl1, Hl2⟩
+    inext
+    wp_pures
+    wp_load
+    wp_load
+    wp_pures
+    imodintro
+    iapply HΦ
+    iframe
+    itrivial
+
 end ParExamples
-```
-
-A fuller `par_client` example wraps this pattern inside a larger
-`let` chain that also multiplies the two final values to assert
-`21 * 2 = 42`. That multiplication still depends on a `PureExec`
-instance for `*` on integers, which iris-lean does not yet ship.
-
-```
--- TODO (upstream — iris-lean): once `PureExec` for arithmetic
--- lands, restore the full `par_client` postcondition with
--- `⌜life = 42⌝`. The `wp_par`-level reasoning above is the
--- complete one — only the post-join arithmetic check is blocked.
-
--- Rocq tutorial reference:
---   Example par_client : expr :=
---     let: "l1" := ref #0 in
---     let: "l2" := ref #0 in
---     (("l1" <- #21) ||| ("l2" <- #2)) ;;
---     let: "life" := !"l1" * !"l2" in
---     ("l1", "l2", "life").
---   Lemma par_client_spec :
---     {{{ True }}}
---       par_client
---     {{{ l1 l2 life, RET (#l1, #l2, #life);
---         l1 ↦ #21 ∗ l2 ↦ #2 ∗ ⌜life = 42⌝ }}}.
 ```
 
 ```savedLean
